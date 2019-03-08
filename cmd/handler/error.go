@@ -27,7 +27,7 @@ func WrapError(err error) *Error {
 	} else if _, ok := err.(auth.UnauthorizedError); ok {
 		return &Error{http.StatusUnauthorized, "unauthorized", err}
 	} else if _, ok := err.(search.NotFoundError); ok {
-		return &Error{http.StatusNotFound, "user does not exist", err}
+		return &Error{http.StatusNotFound, "search does not exist", err}
 	} else {
 		return &Error{
 			http.StatusInternalServerError,
