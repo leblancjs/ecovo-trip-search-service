@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"azure.com/ecovo/trip-search-service/cmd/middleware/auth"
+	"azure.com/ecovo/trip-search-service/pkg/search"
 )
 
 // An Error is an application error that can be handled by a handler.
@@ -25,6 +26,8 @@ func WrapError(err error) *Error {
 		return nil
 	} else if _, ok := err.(auth.UnauthorizedError); ok {
 		return &Error{http.StatusUnauthorized, "unauthorized", err}
+	} else if _, ok := err.(search.NotFoundError); ok {
+		return &Error{http.StatusNotFound, "user does not exist", err}
 	} else {
 		return &Error{
 			http.StatusInternalServerError,
