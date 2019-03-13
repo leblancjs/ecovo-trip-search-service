@@ -9,7 +9,10 @@ import (
 	"azure.com/ecovo/trip-search-service/cmd/handler"
 	"azure.com/ecovo/trip-search-service/cmd/middleware/auth"
 	"azure.com/ecovo/trip-search-service/pkg/db"
+	"azure.com/ecovo/trip-search-service/pkg/pubsub"
+	"azure.com/ecovo/trip-search-service/pkg/pubsub/subscription"
 	"azure.com/ecovo/trip-search-service/pkg/search"
+	"github.com/ably/ably-go/ably"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
@@ -42,23 +45,32 @@ func main() {
 		log.Fatal(err)
 	}
 
+	ablyClient, err := ably.NewRealtimeClient(ably.NewClientOptions(os.Getenv("ABLY_API_KEY")))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ablyPubSubRepository, err := subscription.NewAblyRepository(ablyClient)
+	if err != nil {
+		log.Fatal(err)
+	}
+	pubSubService := pubsub.NewService(ablyPubSubRepository)
+
 	searchRepository, err := search.NewMongoRepository(db.Searches)
 	if err != nil {
 		log.Fatal(err)
 	}
-	searchUseCase := search.NewService(searchRepository)
+	searchUseCase := search.NewService(searchRepository, pubSubService)
 
 	r := mux.NewRouter()
 
 	r.Handle("/search/{id}", handler.RequestID(handler.Auth(authValidator, handler.GetSearchByID(searchUseCase)))).
-		Methods("GET").
-		Headers("Content-Type", "application/json")
+		Methods("GET")
 	r.Handle("/search", handler.RequestID(handler.Auth(authValidator, handler.StartSearch(searchUseCase)))).
 		Methods("POST").
 		HeadersRegexp("Content-Type", "application/(json|json; charset=utf8)")
 	r.Handle("/search/{id}", handler.RequestID(handler.Auth(authValidator, handler.StopSearch(searchUseCase)))).
-		Methods("DELETE").
-		Headers("Content-Type", "application/json")
+		Methods("DELETE")
 
 	log.Fatal(http.ListenAndServe(":"+port, handlers.LoggingHandler(os.Stdout, r)))
 }

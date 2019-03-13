@@ -2,6 +2,12 @@ package entity
 
 import "strings"
 
+// Entity is an interface representing the ability to handle core business
+// logic.
+type Entity interface {
+	Validate() error
+}
+
 // An ID is an entity's unique identifier.
 type ID string
 

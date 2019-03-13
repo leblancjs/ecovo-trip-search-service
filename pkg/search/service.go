@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"azure.com/ecovo/trip-search-service/pkg/entity"
+	"azure.com/ecovo/trip-search-service/pkg/pubsub"
 )
 
 // UseCase is an interface representing the ability to handle the business
@@ -16,13 +17,15 @@ type UseCase interface {
 
 // A Service handles the business logic related to searches for trips.
 type Service struct {
-	repo Repository
+	repo         Repository
+	pubSub       pubsub.UseCase
+	orchestrator *Orchestrator
 }
 
 // NewService creates a search service to handle business logic and manipulate
 // searches through a repository.
-func NewService(repo Repository) *Service {
-	return &Service{repo}
+func NewService(repo Repository, pubSub pubsub.UseCase) UseCase {
+	return &Service{repo, pubSub, NewOrchestrator()}
 }
 
 // Create validates the trips's information.
@@ -38,6 +41,18 @@ func (s *Service) Create(t *entity.Search) (*entity.Search, error) {
 
 	t.ID, err = s.repo.Create(t)
 	if err != nil {
+		return nil, err
+	}
+
+	sub, err := s.pubSub.Subscribe(string(t.ID))
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.orchestrator.StartWorker(string(t.ID), sub)
+	if err != nil {
+		s.pubSub.Unsubscribe(string(t.ID))
+		_ = s.repo.Delete(t.ID)
 		return nil, err
 	}
 
@@ -57,6 +72,10 @@ func (s *Service) FindByID(ID entity.ID) (*entity.Search, error) {
 
 // Delete erases the search from the repository.
 func (s *Service) Delete(ID entity.ID) error {
+	s.orchestrator.StopWorker(string(ID))
+
+	s.pubSub.Unsubscribe(string(ID))
+
 	err := s.repo.Delete(ID)
 	if err != nil {
 		return err

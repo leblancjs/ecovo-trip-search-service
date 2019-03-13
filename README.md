@@ -26,10 +26,11 @@ The table below enumerates the different environment variables.
 |---|---|---|
 |AUTH_DOMAIN|Yes|Domain where the user info endpoint is hosted (ex. my.domain.com)|
 |DB_HOST|Yes|URI to where the database is hosted|
-|DB_USERNAME|Yes|Username to use to to establish the database connection|
+|DB_USERNAME|Yes|Username to use to establish the database connection|
 |DB_PASSWORD|Yes|Password to use to establish the database connection|
 |DB_NAME|Yes|Name of the database to use on the server|
 |DB_CONNECTION_TIMEOUT|No|Time to wait before giving up on connecting to the database|
+|ABLY_API_KEY|Yes|API key to use to establish the Ably client connection|
 
 ## Build and Test
 ### Prerequisites
