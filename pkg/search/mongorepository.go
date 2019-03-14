@@ -44,7 +44,7 @@ func newDocumentFromEntity(t *entity.Search) (*document, error) {
 
 func (d document) Entity() *entity.Search {
 	return &entity.Search{
-		entity.NewIDFromHex(d.ID.Hex()),
+		ID: entity.NewIDFromHex(d.ID.Hex()),
 	}
 }
 

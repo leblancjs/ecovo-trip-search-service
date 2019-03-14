@@ -23,17 +23,18 @@ func NewAblySubscription(channel *ably.RealtimeChannel) (Subscription, error) {
 	return &AblySubscription{channel}, nil
 }
 
-func (s *AblySubscription) Publish(event *Event) error {
-	if event == nil {
-		return fmt.Errorf("subscription.AblySubscription [topic=%s]: event cannot be nil", s.Topic())
+// Publish sends a message on the subscription's topic.
+func (s *AblySubscription) Publish(msg *Message) error {
+	if msg == nil {
+		return fmt.Errorf("subscription.AblySubscription [topic=%s]: message cannot be nil", s.Topic())
 	}
 
-	payload, err := json.Marshal(event.Data)
+	payload, err := json.Marshal(msg.Data)
 	if err != nil {
 		return fmt.Errorf("subscription.AblySubscription [topic=%s]: failed to marshal message (%s)", s.Topic(), err)
 	}
 
-	res, err := s.channel.Publish(event.Type, string(payload))
+	res, err := s.channel.Publish(msg.Type, string(payload))
 	if err != nil {
 		return fmt.Errorf("subscription.AblySubscription [topic=%s]: failed to publish message (%s)", s.Topic(), err)
 	}

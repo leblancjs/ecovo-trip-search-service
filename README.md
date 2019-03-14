@@ -9,13 +9,11 @@
 * [Errors](#errors)
 
 ## Introduction
-The trip search service implements the trip search REST API. It makes it possible to start, stop or update a search in progress.
+The trip search service implements the trip search REST API. It makes it possible to start or stop searching for trips.
 
 ## To-Do
-* Integrate Ably client library
-* Implement REST API to create, update and delete searches
+* Determine what filters to accept and document them in the API endpoints
 * Implement algorithm to search for trips more intelligently
-* Complete the README
 
 ## Configuration
 The application's database connection and Auth0 domain are configured using environment variables. To avoid having to define them every time the service is run, they are kept in the `.env` file at the root of the repository.
@@ -139,7 +137,73 @@ heroku logs --tail
 ```
 
 ## Endpoints
-TODO: Fill out this section.
+### POST /search
+A request to this endpoint will start a search. The response will not contain any results. It will contain the search's unique identifier (ID), which can be used to subscribe to a `PubSub` topic to listen for the results, which will be delivered asynchronously.
+
+The topic has the following format: `search:<SEARCH_ID>`.
+
+It is important to call `DELETE /search/{id}` when done, to avoid using resources to finish searching for results when no one cares about them anymore.
+
+#### Request
+##### Headers
+```
+Content-Type: application/json
+Authorization: Bearer {access_token}
+```
+
+##### Body
+```
+{
+    "filters": {
+        // TODO: Define the filters
+    }
+}
+```
+
+#### Response
+##### Status Code
+* 201 CREATED
+
+##### Headers
+```
+Content-Type: application/json
+```
+
+##### Body
+```
+{
+    "id": "{id}",
+    "filters": {
+        // TODO: Define the filters
+    }
+}
+```
+
+##### Possible Errors
+* 400 Bad Request
+* 500 Internal Server Error
+
+### DELETE /search/{id}
+A request to this endpoint will terminate the search with the given ID.
+
+It is important to call it when done, to avoid using resources to finish searching for results when no one cares about them anymore.
+
+#### URL Parameters
+##### id
+The search's unique identifier generated when it is created.
+
+#### Request
+##### Headers
+```
+Authorization: Bearer {access_token}
+```
+
+#### Response
+##### Status Code
+200 OK
+
+##### Possible Errors
+* 500 Internal Server Error
 
 ## Errors
 ### Structure

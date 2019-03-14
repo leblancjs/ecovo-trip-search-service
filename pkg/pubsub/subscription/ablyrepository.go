@@ -7,6 +7,9 @@ import (
 	"github.com/ably/ably-go/ably"
 )
 
+// An AblyRepository is a repository that performs CRUD operations on
+// subscriptions in an in-memory database. It manages subscriptions to Ably
+// realtime channels.
 type AblyRepository struct {
 	client              *ably.RealtimeClient
 	subcriptionsByTopic map[string][]Subscription
@@ -14,6 +17,8 @@ type AblyRepository struct {
 
 const channelPrefix = "search:"
 
+// NewAblyRepository creates a subscription repository to manage Ably realtime
+// channels.
 func NewAblyRepository(client *ably.RealtimeClient) (Repository, error) {
 	if client == nil {
 		return nil, fmt.Errorf("pubsub.AblyRepository: client is nil")
@@ -25,6 +30,8 @@ func NewAblyRepository(client *ably.RealtimeClient) (Repository, error) {
 	}, nil
 }
 
+// Create creates a new Ably realtime channel for the given topic, and a
+// subscription to manage it.
 func (r *AblyRepository) Create(topic string) (Subscription, error) {
 	if topic == "" {
 		return nil, fmt.Errorf("subscription.AblyRepository: topic cannot be empty")
@@ -41,6 +48,8 @@ func (r *AblyRepository) Create(topic string) (Subscription, error) {
 	return sub, nil
 }
 
+// Delete destroys the subscription for the given topic, destroying the Ably
+// realtime channel it manages.
 func (r *AblyRepository) Delete(topic string) {
 	r.removeSubscriptionFromTopic(topic)
 }

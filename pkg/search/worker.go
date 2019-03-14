@@ -5,16 +5,27 @@ import (
 	"log"
 	"time"
 
+	"azure.com/ecovo/trip-search-service/pkg/entity"
 	"azure.com/ecovo/trip-search-service/pkg/pubsub/subscription"
 )
 
+// A Worker does all the heavy lifting to search for trips that either match
+// the search filters or come close. It runs in a Go routine, to avoid blocking
+// the entire service, and publishes results to a subscription.
 type Worker struct {
+	filters *entity.Filters
 	sub     subscription.Subscription
 	started bool
 	quit    chan bool
 }
 
-func NewWorker(sub subscription.Subscription) (*Worker, error) {
+// NewWorker creates a new search worker that uses the subscription to publish
+// results.
+func NewWorker(filters *entity.Filters, sub subscription.Subscription) (*Worker, error) {
+	if filters == nil {
+		return nil, fmt.Errorf("search.Worker: cannot work with nil filters")
+	}
+
 	if sub == nil {
 		return nil, fmt.Errorf("search.Worker: cannot work with nil subscription")
 	}
@@ -25,6 +36,7 @@ func NewWorker(sub subscription.Subscription) (*Worker, error) {
 	}, nil
 }
 
+// Start tells the worker to start searching for trips.
 func (w *Worker) Start() {
 	if w.started {
 		return
@@ -35,6 +47,7 @@ func (w *Worker) Start() {
 	go w.run()
 }
 
+// Stop tells the worker to stop searching for trips.
 func (w *Worker) Stop() {
 	if !w.started {
 		return
@@ -52,21 +65,30 @@ func (w *Worker) run() {
 		case <-w.quit:
 			return
 		default:
-			type t struct {
-				Topic   string `json:"topic"`
-				Message string `json:"message"`
+			type trip struct {
+				Driver      string `json:"driver"`
+				Source      string `json:"source"`
+				Destination string `json:"destination"`
+				LeaveAt     string `json:"leaveAt"`
+				Description string `json:"description"`
 			}
 
 			var err error
 			if i%5 == 0 {
-				err = w.sub.Publish(&subscription.Event{
-					Type: "clearResults",
+				err = w.sub.Publish(&subscription.Message{
+					Type: EventClearResults,
 					Data: nil,
 				})
 			} else {
-				err = w.sub.Publish(&subscription.Event{
-					Type: "result",
-					Data: t{w.sub.Topic(), fmt.Sprintf("Hello %d", i)},
+				err = w.sub.Publish(&subscription.Message{
+					Type: EventAddResult,
+					Data: trip{
+						Driver:      "Harold",
+						Source:      "Hungary",
+						Destination: "Montreal, QC, Canada",
+						LeaveAt:     "Never",
+						Description: fmt.Sprintf("I'm goin nowhere (%d)", i),
+					},
 				})
 			}
 			if err != nil {

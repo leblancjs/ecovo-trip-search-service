@@ -20,6 +20,9 @@ RUN go mod download
 # Build the project
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags '-w -s' -o /bin/${BINARY_NAME}
 
+# Test the project
+RUN CGO_ENABLED=0 go test ../...
+
 # Expose port
 EXPOSE 8080/tcp
 

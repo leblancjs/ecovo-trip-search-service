@@ -10,7 +10,7 @@ import (
 // UseCase is an interface representing the ability to handle the business
 // logic that involves searches for trips.
 type UseCase interface {
-	Create(t *entity.Search) (*entity.Search, error)
+	Create(search *entity.Search) (*entity.Search, error)
 	FindByID(ID entity.ID) (*entity.Search, error)
 	Delete(ID entity.ID) error
 }
@@ -28,51 +28,54 @@ func NewService(repo Repository, pubSub pubsub.UseCase) UseCase {
 	return &Service{repo, pubSub, NewOrchestrator()}
 }
 
-// Create validates the trips's information.
-func (s *Service) Create(t *entity.Search) (*entity.Search, error) {
-	if t == nil {
+// Create validates the search's information, creates it, creates a
+// subscription and starts searching for results in the background that will be
+// published to the subscription.
+func (s *Service) Create(search *entity.Search) (*entity.Search, error) {
+	if search == nil {
 		return nil, fmt.Errorf("trip.Service: trip is nil")
 	}
 
-	err := t.Validate()
+	err := search.Validate()
 	if err != nil {
 		return nil, err
 	}
 
-	t.ID, err = s.repo.Create(t)
+	search.ID, err = s.repo.Create(search)
 	if err != nil {
 		return nil, err
 	}
 
-	sub, err := s.pubSub.Subscribe(string(t.ID))
+	sub, err := s.pubSub.Subscribe(string(search.ID))
 	if err != nil {
 		return nil, err
 	}
 
-	err = s.orchestrator.StartWorker(string(t.ID), sub)
+	err = s.orchestrator.StartSearch(search, sub)
 	if err != nil {
-		s.pubSub.Unsubscribe(string(t.ID))
-		_ = s.repo.Delete(t.ID)
+		s.pubSub.Unsubscribe(search.ID.Hex())
+		_ = s.repo.Delete(search.ID)
 		return nil, err
 	}
 
-	return t, nil
+	return search, nil
 }
 
 // FindByID retrieves the search with the given ID in the repository, if it
 // exists.
 func (s *Service) FindByID(ID entity.ID) (*entity.Search, error) {
-	t, err := s.repo.FindByID(ID)
+	search, err := s.repo.FindByID(ID)
 	if err != nil {
 		return nil, NotFoundError{err.Error()}
 	}
 
-	return t, nil
+	return search, nil
 }
 
-// Delete erases the search from the repository.
+// Delete erases the search from the repository, and stops searching for
+// results.
 func (s *Service) Delete(ID entity.ID) error {
-	s.orchestrator.StopWorker(string(ID))
+	s.orchestrator.StopSearch(ID.Hex())
 
 	s.pubSub.Unsubscribe(string(ID))
 
