@@ -16,7 +16,9 @@
                 "DB_USERNAME": "ecovo_rw",
                 "DB_PASSWORD": "q4GVRkQmPDwOVADz",
                 "DB_NAME": "ecovo",
-                "ABLY_API_KEY": "VfrzOg.bgLV3Q:h9hyzZQOGrvTl_4I"
+                "ABLY_API_KEY": "VfrzOg.bgLV3Q:h9hyzZQOGrvTl_4I",
+                "TRIP_SERVICE_DOMAIN": "ecovo-trip-service.herokuapp.com",
+                "TRIP_SERVICE_AUTH": "aGFyb2xkOmhpZGV0aGVwNGlu"
             },
             "args": []
         }

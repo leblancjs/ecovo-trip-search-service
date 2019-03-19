@@ -12,6 +12,7 @@ import (
 	"azure.com/ecovo/trip-search-service/pkg/pubsub"
 	"azure.com/ecovo/trip-search-service/pkg/pubsub/subscription"
 	"azure.com/ecovo/trip-search-service/pkg/search"
+	"azure.com/ecovo/trip-search-service/pkg/trip"
 	"github.com/ably/ably-go/ably"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -56,11 +57,17 @@ func main() {
 	}
 	pubSubService := pubsub.NewService(ablyPubSubRepository)
 
+	tripRepository, err := trip.NewRestRepository(os.Getenv("TRIP_SERVICE_DOMAIN"), os.Getenv("TRIP_SERVICE_AUTH"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	tripUseCase := trip.NewService(tripRepository)
+
 	searchRepository, err := search.NewMongoRepository(db.Searches)
 	if err != nil {
 		log.Fatal(err)
 	}
-	searchUseCase := search.NewService(searchRepository, pubSubService)
+	searchUseCase := search.NewService(searchRepository, pubSubService, tripUseCase)
 
 	r := mux.NewRouter()
 

@@ -5,6 +5,7 @@ import (
 
 	"azure.com/ecovo/trip-search-service/pkg/entity"
 	"azure.com/ecovo/trip-search-service/pkg/pubsub"
+	"azure.com/ecovo/trip-search-service/pkg/trip"
 )
 
 // UseCase is an interface representing the ability to handle the business
@@ -19,13 +20,14 @@ type UseCase interface {
 type Service struct {
 	repo         Repository
 	pubSub       pubsub.UseCase
+	trip         trip.UseCase
 	orchestrator *Orchestrator
 }
 
 // NewService creates a search service to handle business logic and manipulate
 // searches through a repository.
-func NewService(repo Repository, pubSub pubsub.UseCase) UseCase {
-	return &Service{repo, pubSub, NewOrchestrator()}
+func NewService(repo Repository, pubSub pubsub.UseCase, trip trip.UseCase) UseCase {
+	return &Service{repo, pubSub, trip, NewOrchestrator()}
 }
 
 // Create validates the search's information, creates it, creates a
@@ -51,7 +53,12 @@ func (s *Service) Create(search *entity.Search) (*entity.Search, error) {
 		return nil, err
 	}
 
-	err = s.orchestrator.StartSearch(search, sub)
+	trips, err := s.trip.Find(search.Filters)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.orchestrator.StartSearch(search, sub, trips)
 	if err != nil {
 		s.pubSub.Unsubscribe(search.ID.Hex())
 		_ = s.repo.Delete(search.ID)

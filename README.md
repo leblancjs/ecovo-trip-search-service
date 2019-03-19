@@ -155,8 +155,22 @@ Authorization: Bearer {access_token}
 ```
 {
     "filters": {
-        // TODO: Define the filters
-    }
+        "source": {
+            "longitude": {{src_lng}},
+            "latitude": {{src_lat}}
+        },
+        "destination": {
+            "longitude": {{dst_lng}},
+            "latitude": {{dst_lat}}
+        },
+        "leaveAt": "{{leave_at}}",
+        "seats": {{seats}},
+        "details": {
+            "animals": {{animals}},
+            "luggages": {{luggages}}
+        },
+        "radiusThresh": {{radiusThresh}}
+	}
 }
 ```
 
@@ -174,8 +188,22 @@ Content-Type: application/json
 {
     "id": "{id}",
     "filters": {
-        // TODO: Define the filters
-    }
+        "source": {
+            "longitude": {{src_lng}},
+            "latitude": {{src_lat}}
+        },
+        "destination": {
+            "longitude": {{dst_lng}},
+            "latitude": {{dst_lat}}
+        },
+        "leaveAt": "{{leave_at}}",
+        "seats": {{seats}},
+        "details": {
+            "animals": {{animals}},
+            "luggages": {{luggages}}
+        },
+        "radiusThresh": {{radiusThresh}}
+	}
 }
 ```
 

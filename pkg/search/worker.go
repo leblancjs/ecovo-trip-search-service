@@ -3,7 +3,6 @@ package search
 import (
 	"fmt"
 	"log"
-	"time"
 
 	"azure.com/ecovo/trip-search-service/pkg/entity"
 	"azure.com/ecovo/trip-search-service/pkg/pubsub/subscription"
@@ -16,12 +15,13 @@ type Worker struct {
 	filters *entity.Filters
 	sub     subscription.Subscription
 	started bool
+	trips   []*entity.Trip
 	quit    chan bool
 }
 
 // NewWorker creates a new search worker that uses the subscription to publish
 // results.
-func NewWorker(filters *entity.Filters, sub subscription.Subscription) (*Worker, error) {
+func NewWorker(filters *entity.Filters, sub subscription.Subscription, trips []*entity.Trip) (*Worker, error) {
 	if filters == nil {
 		return nil, fmt.Errorf("search.Worker: cannot work with nil filters")
 	}
@@ -31,8 +31,9 @@ func NewWorker(filters *entity.Filters, sub subscription.Subscription) (*Worker,
 	}
 
 	return &Worker{
-		sub:  sub,
-		quit: make(chan bool),
+		sub:   sub,
+		trips: trips,
+		quit:  make(chan bool),
 	}, nil
 }
 
@@ -59,46 +60,22 @@ func (w *Worker) Stop() {
 }
 
 func (w *Worker) run() {
-	i := 0
 	for {
 		select {
 		case <-w.quit:
 			return
 		default:
-			type trip struct {
-				Driver      string `json:"driver"`
-				Source      string `json:"source"`
-				Destination string `json:"destination"`
-				LeaveAt     string `json:"leaveAt"`
-				Description string `json:"description"`
-			}
-
-			var err error
-			if i%5 == 0 {
-				err = w.sub.Publish(&subscription.Message{
-					Type: EventClearResults,
-					Data: nil,
-				})
-			} else {
-				err = w.sub.Publish(&subscription.Message{
+			for t := range w.trips {
+				err := w.sub.Publish(&subscription.Message{
 					Type: EventAddResult,
-					Data: trip{
-						Driver:      "Harold",
-						Source:      "Hungary",
-						Destination: "Montreal, QC, Canada",
-						LeaveAt:     "Never",
-						Description: fmt.Sprintf("I'm goin nowhere (%d)", i),
-					},
+					Data: t,
 				})
+				if err != nil {
+					log.Println(err)
+					break
+				}
 			}
-			if err != nil {
-				log.Println(err)
-				break
-			}
-
-			i++
-
-			time.Sleep(3 * time.Second)
+			break
 		}
 	}
 }
