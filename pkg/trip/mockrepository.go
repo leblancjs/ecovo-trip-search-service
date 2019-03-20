@@ -35,8 +35,8 @@ func createMockTrip() *entity.Trip {
 			Name:      "Montreal",
 		},
 		Destination: &entity.Point{
-			Latitude:  52.939915,
-			Longitude: -73.549133,
+			Latitude:  46.813877,
+			Longitude: -71.207977,
 			Name:      "Quebec",
 		},
 		LeaveAt:  time.Now().Add(time.Hour * 5),
