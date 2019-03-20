@@ -30,13 +30,13 @@ func (r *MockRepository) Find(f *entity.Filters) ([]*entity.Trip, error) {
 func createMockTrip() *entity.Trip {
 	return &entity.Trip{
 		Source: &entity.Point{
-			Latitude:  45.50169,
-			Longitude: -73.567253,
+			Latitude:  45.4944494,
+			Longitude: -73.561703,
 			Name:      "Montreal",
 		},
 		Destination: &entity.Point{
-			Latitude:  46.1240621,
-			Longitude: -73.5055304,
+			Latitude:  52.939915,
+			Longitude: -73.549133,
 			Name:      "Quebec",
 		},
 		LeaveAt:  time.Now().Add(time.Hour * 5),
@@ -44,8 +44,8 @@ func createMockTrip() *entity.Trip {
 		Seats:    3,
 		Stops: []*entity.Point{
 			&entity.Point{
-				Latitude:  45.9196296,
-				Longitude: -73.6149923,
+				Latitude:  45.881168,
+				Longitude: -72.484734,
 				Name:      "Drummondville",
 			},
 		},
