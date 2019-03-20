@@ -60,20 +60,27 @@ func (w *Worker) Stop() {
 }
 
 func (w *Worker) run() {
+	tripIndex := 0
+
 	for {
 		select {
 		case <-w.quit:
 			return
 		default:
-			for t := range w.trips {
+			if tripIndex < len(w.trips) {
 				err := w.sub.Publish(&subscription.Message{
 					Type: EventAddResult,
-					Data: t,
+					Data: w.trips[tripIndex],
 				})
 				if err != nil {
 					log.Println(err)
 					break
 				}
+
+				tripIndex++
+			} else {
+				w.started = false
+				return
 			}
 			break
 		}
