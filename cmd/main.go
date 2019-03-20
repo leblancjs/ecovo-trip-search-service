@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"azure.com/ecovo/trip-search-service/cmd/handler"
@@ -57,10 +58,25 @@ func main() {
 	}
 	pubSubService := pubsub.NewService(ablyPubSubRepository)
 
-	tripRepository, err := trip.NewRestRepository(os.Getenv("TRIP_SERVICE_DOMAIN"), os.Getenv("TRIP_SERVICE_AUTH"))
+	var tripRepository trip.Repository
+
+	sendMocks, err := strconv.ParseBool(os.Getenv("SEND_MOCKS"))
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("SEND_MOCKS env variable must be true or false")
 	}
+
+	if sendMocks {
+		tripRepository, err = trip.NewMockRepository()
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		tripRepository, err = trip.NewRestRepository(os.Getenv("TRIP_SERVICE_DOMAIN"), os.Getenv("TRIP_SERVICE_AUTH"))
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
 	tripUseCase := trip.NewService(tripRepository)
 
 	searchRepository, err := search.NewMongoRepository(db.Searches)
