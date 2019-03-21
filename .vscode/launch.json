@@ -19,7 +19,7 @@
                 "ABLY_API_KEY": "VfrzOg.bgLV3Q:h9hyzZQOGrvTl_4I",
                 "TRIP_SERVICE_DOMAIN": "ecovo-trip-service.herokuapp.com",
                 "TRIP_SERVICE_AUTH": "aGFyb2xkOmhpZGV0aGVwNGlu",
-                "SEND_MOCKS": true
+                "SEND_MOCKS": false
             },
             "args": []
         }

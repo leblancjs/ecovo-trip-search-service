@@ -30,6 +30,14 @@ type document struct {
 	Steps       []*entity.Point    `bson:"steps"`
 }
 
+const (
+	// LeaveAtString is a string used for query params
+	LeaveAtString = "leaveAt"
+
+	// ArriveByString is a string used for query params
+	ArriveByString = "arriveBy"
+)
+
 // NewRestRepository creates a trip repository for a MongoDB collection.
 func NewRestRepository(domain string, authToken string) (Repository, error) {
 	if domain == "" {
@@ -53,11 +61,25 @@ func (r *RestRepository) Find(f *entity.Filters) ([]*entity.Trip, error) {
 	req.Header.Set("Authorization", fmt.Sprintf("Basic %s", r.authToken))
 
 	q := req.URL.Query()
+
 	params, err := f.ToMap()
 	for key, value := range params {
-		q.Set(key, value)
+		if key != LeaveAtString && key != ArriveByString {
+			q.Set(key, value)
+		}
 	}
+
 	req.URL.RawQuery = q.Encode()
+
+	if len(params[LeaveAtString]) > 0 {
+		req.URL.RawQuery = fmt.Sprintf("%s%s%s", req.URL.RawQuery, "&"+LeaveAtString+"=", params[LeaveAtString])
+	}
+
+	if len(params[ArriveByString]) > 0 {
+		req.URL.RawQuery = fmt.Sprintf("%s%s%s", req.URL.RawQuery, "&"+ArriveByString+"=", params[ArriveByString])
+	}
+
+	fmt.Printf(req.URL.RawQuery)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
