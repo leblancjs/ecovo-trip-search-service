@@ -27,7 +27,6 @@ type document struct {
 	Seats       int                `bson:"seats"`
 	Stops       []*entity.Point    `bson:"stops"`
 	Details     *entity.Details    `bson:"details"`
-	Steps       []*entity.Point    `bson:"steps"`
 }
 
 const (

@@ -17,7 +17,6 @@ type Trip struct {
 	Seats       int       `json:"seats"`
 	Stops       []*Point  `json:"stops"`
 	Details     *Details  `json:"details"`
-	Steps       []*Point  `json:"steps"`
 }
 
 const (
