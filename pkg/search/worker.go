@@ -6,22 +6,26 @@ import (
 
 	"azure.com/ecovo/trip-search-service/pkg/entity"
 	"azure.com/ecovo/trip-search-service/pkg/pubsub/subscription"
+	"azure.com/ecovo/trip-search-service/pkg/route"
+	"github.com/umahmood/haversine"
+	"googlemaps.github.io/maps"
 )
 
 // A Worker does all the heavy lifting to search for trips that either match
 // the search filters or come close. It runs in a Go routine, to avoid blocking
 // the entire service, and publishes results to a subscription.
 type Worker struct {
-	filters *entity.Filters
-	sub     subscription.Subscription
-	started bool
-	trips   []*entity.Trip
-	quit    chan bool
+	filters      *entity.Filters
+	sub          subscription.Subscription
+	started      bool
+	trips        []*entity.Trip
+	routeService route.UseCase
+	quit         chan bool
 }
 
 // NewWorker creates a new search worker that uses the subscription to publish
 // results.
-func NewWorker(filters *entity.Filters, sub subscription.Subscription, trips []*entity.Trip) (*Worker, error) {
+func NewWorker(filters *entity.Filters, sub subscription.Subscription, trips []*entity.Trip, routeService route.UseCase) (*Worker, error) {
 	if filters == nil {
 		return nil, fmt.Errorf("search.Worker: cannot work with nil filters")
 	}
@@ -31,9 +35,11 @@ func NewWorker(filters *entity.Filters, sub subscription.Subscription, trips []*
 	}
 
 	return &Worker{
-		sub:   sub,
-		trips: trips,
-		quit:  make(chan bool),
+		filters:      filters,
+		sub:          sub,
+		trips:        trips,
+		routeService: routeService,
+		quit:         make(chan bool),
 	}, nil
 }
 
@@ -68,21 +74,78 @@ func (w *Worker) run() {
 			return
 		default:
 			if tripIndex < len(w.trips) {
-				err := w.sub.Publish(&subscription.Message{
-					Type: EventAddResult,
-					Data: w.trips[tripIndex],
-				})
+				r, err := w.routeService.GetRoute(w.trips[tripIndex])
 				if err != nil {
-					log.Println(err)
+					log.Println("searchWorker: failed to get route from google maps")
 					break
 				}
 
+				isValid := false
+				if w.filters != nil && w.trips[tripIndex] != nil {
+					isValid, err = validateTrip(w.trips[tripIndex], w.filters, r)
+					if err != nil {
+						log.Println(err)
+						break
+					}
+				}
+
+				if isValid {
+					err := w.sub.Publish(&subscription.Message{
+						Type: EventAddResult,
+						Data: w.trips[tripIndex],
+					})
+					if err != nil {
+						log.Println(err)
+						break
+					}
+				}
 				tripIndex++
 			} else {
 				w.started = false
 				return
 			}
+
 			break
 		}
 	}
+}
+
+// validateTrip will validate
+func validateTrip(t *entity.Trip, f *entity.Filters, route maps.Route) (bool, error) {
+	threshold := metersToKM(float64(*f.RadiusThresh))
+	points, err := route.OverviewPolyline.Decode()
+	if err != nil {
+		return false, err
+	}
+
+	source := haversine.Coord{Lat: f.Source.Latitude, Lon: f.Source.Longitude}
+	destination := haversine.Coord{Lat: f.Destination.Latitude, Lon: f.Destination.Longitude}
+
+	isSourceOk := false
+	isDestinationOk := false
+
+	for _, p := range points {
+		routePoint := haversine.Coord{Lat: p.Lat, Lon: p.Lng}
+		_, sourceDistance := haversine.Distance(source, routePoint)
+		_, destinationDistance := haversine.Distance(destination, routePoint)
+
+		if sourceDistance <= threshold {
+			isSourceOk = true
+		}
+
+		if destinationDistance <= threshold {
+			isDestinationOk = true
+		}
+	}
+
+	if isSourceOk && isDestinationOk {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+// metersToKM converts meters into kilometers
+func metersToKM(meters float64) float64 {
+	return meters / 1000.0
 }

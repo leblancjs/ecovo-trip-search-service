@@ -12,11 +12,13 @@ import (
 	"azure.com/ecovo/trip-search-service/pkg/db"
 	"azure.com/ecovo/trip-search-service/pkg/pubsub"
 	"azure.com/ecovo/trip-search-service/pkg/pubsub/subscription"
+	"azure.com/ecovo/trip-search-service/pkg/route"
 	"azure.com/ecovo/trip-search-service/pkg/search"
 	"azure.com/ecovo/trip-search-service/pkg/trip"
 	"github.com/ably/ably-go/ably"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"googlemaps.github.io/maps"
 )
 
 func main() {
@@ -60,9 +62,12 @@ func main() {
 
 	var tripRepository trip.Repository
 
-	sendMocks, err := strconv.ParseBool(os.Getenv("SEND_MOCKS"))
-	if err != nil {
-		log.Fatal("SEND_MOCKS env variable must be true or false")
+	sendMocks := false
+	if os.Getenv("SEND_MOCKS") != "" {
+		sendMocks, err = strconv.ParseBool(os.Getenv("SEND_MOCKS"))
+		if err != nil {
+			log.Fatal("SEND_MOCKS env variable must be true or false")
+		}
 	}
 
 	if sendMocks {
@@ -79,11 +84,22 @@ func main() {
 
 	tripUseCase := trip.NewService(tripRepository)
 
+	mapsClient, err := maps.NewClient(maps.WithAPIKey(os.Getenv("GOOGLE_MAPS_API_KEY")))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	routeRepository, err := route.NewGoogleMapsRepository(mapsClient)
+	if err != nil {
+		log.Fatal(err)
+	}
+	routeUseCase := route.NewService(routeRepository)
+
 	searchRepository, err := search.NewMongoRepository(db.Searches)
 	if err != nil {
 		log.Fatal(err)
 	}
-	searchUseCase := search.NewService(searchRepository, pubSubService, tripUseCase)
+	searchUseCase := search.NewService(searchRepository, pubSubService, tripUseCase, routeUseCase)
 
 	r := mux.NewRouter()
 

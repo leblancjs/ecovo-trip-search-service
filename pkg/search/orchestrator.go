@@ -5,19 +5,21 @@ import (
 
 	"azure.com/ecovo/trip-search-service/pkg/entity"
 	"azure.com/ecovo/trip-search-service/pkg/pubsub/subscription"
+	"azure.com/ecovo/trip-search-service/pkg/route"
 )
 
 // An Orchestrator manages workers that run asynchronously to gather search
 // results and publish them on subscriptions. It creates, starts, stops and
 // deletes them.
 type Orchestrator struct {
-	workers map[string]*Worker
+	workers      map[string]*Worker
+	routeService route.UseCase
 }
 
 // NewOrchestrator creates a search orchestrator to manage workers that run to
 // search for results asynchronously.
-func NewOrchestrator() *Orchestrator {
-	return &Orchestrator{make(map[string]*Worker)}
+func NewOrchestrator(routeService route.UseCase) *Orchestrator {
+	return &Orchestrator{make(map[string]*Worker), routeService}
 }
 
 // StartSearch creates and starts a worker to search for results and publish
@@ -35,7 +37,7 @@ func (o *Orchestrator) StartSearch(search *entity.Search, sub subscription.Subsc
 		return fmt.Errorf("search.Orchestrator: cannot start another worker for same search ID \"%s\"", searchID)
 	}
 
-	worker, err := NewWorker(search.Filters, sub, trips)
+	worker, err := NewWorker(search.Filters, sub, trips, o.routeService)
 	if err != nil {
 		return err
 	}

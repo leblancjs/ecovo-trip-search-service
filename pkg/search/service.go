@@ -5,6 +5,7 @@ import (
 
 	"azure.com/ecovo/trip-search-service/pkg/entity"
 	"azure.com/ecovo/trip-search-service/pkg/pubsub"
+	"azure.com/ecovo/trip-search-service/pkg/route"
 	"azure.com/ecovo/trip-search-service/pkg/trip"
 )
 
@@ -24,10 +25,12 @@ type Service struct {
 	orchestrator *Orchestrator
 }
 
+const channelPrefix = "search:"
+
 // NewService creates a search service to handle business logic and manipulate
 // searches through a repository.
-func NewService(repo Repository, pubSub pubsub.UseCase, trip trip.UseCase) UseCase {
-	return &Service{repo, pubSub, trip, NewOrchestrator()}
+func NewService(repo Repository, pubSub pubsub.UseCase, trip trip.UseCase, routeService route.UseCase) UseCase {
+	return &Service{repo, pubSub, trip, NewOrchestrator(routeService)}
 }
 
 // Create validates the search's information, creates it, creates a
@@ -48,7 +51,7 @@ func (s *Service) Create(search *entity.Search) (*entity.Search, error) {
 		return nil, err
 	}
 
-	sub, err := s.pubSub.Subscribe(string(search.ID))
+	sub, err := s.pubSub.Subscribe(channelPrefix + string(search.ID))
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +63,7 @@ func (s *Service) Create(search *entity.Search) (*entity.Search, error) {
 
 	err = s.orchestrator.StartSearch(search, sub, trips)
 	if err != nil {
-		s.pubSub.Unsubscribe(search.ID.Hex())
+		s.pubSub.Unsubscribe(channelPrefix + search.ID.Hex())
 		_ = s.repo.Delete(search.ID)
 		return nil, err
 	}
@@ -84,7 +87,7 @@ func (s *Service) FindByID(ID entity.ID) (*entity.Search, error) {
 func (s *Service) Delete(ID entity.ID) error {
 	s.orchestrator.StopSearch(ID.Hex())
 
-	s.pubSub.Unsubscribe(string(ID))
+	s.pubSub.Unsubscribe(channelPrefix + string(ID))
 
 	err := s.repo.Delete(ID)
 	if err != nil {

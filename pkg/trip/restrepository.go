@@ -86,7 +86,7 @@ func (r *RestRepository) Find(f *entity.Filters) ([]*entity.Trip, error) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("trip.repository: failed to validate token")
+		return nil, fmt.Errorf("trip.repository: failed request to trip-api (HTTP %d)", resp.StatusCode)
 	}
 
 	var trips []*entity.Trip

@@ -15,8 +15,6 @@ type AblyRepository struct {
 	subcriptionsByTopic map[string][]Subscription
 }
 
-const channelPrefix = "search:"
-
 // NewAblyRepository creates a subscription repository to manage Ably realtime
 // channels.
 func NewAblyRepository(client *ably.RealtimeClient) (Repository, error) {
@@ -37,7 +35,7 @@ func (r *AblyRepository) Create(topic string) (Subscription, error) {
 		return nil, fmt.Errorf("subscription.AblyRepository: topic cannot be empty")
 	}
 
-	channel := r.client.Channels.Get(channelPrefix + topic)
+	channel := r.client.Channels.Get(topic)
 	sub, err := NewAblySubscription(channel)
 	if err != nil {
 		return nil, err
@@ -82,7 +80,7 @@ func (r *AblyRepository) removeSubscriptionFromTopic(topic string) {
 	}
 
 	for i, sub := range subs {
-		if strings.Compare(sub.Topic(), channelPrefix+topic) == 0 {
+		if strings.Compare(sub.Topic(), topic) == 0 {
 			r.subcriptionsByTopic[topic] = append(subs[:i], subs[i+1:]...)
 			break
 		}
