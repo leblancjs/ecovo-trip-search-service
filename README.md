@@ -269,3 +269,78 @@ went wrong.
 |401|Unauthorized|As the name suggests, this means that the user is not authorized to access the resource. Normally, this is because the token is invalid or expired.
 |404|Not Found|When no trip search can be found for a given ID, we'll tell ya! Try again when it's created ;).
 |500|Internal Server Error|We don't like this one. It means that the service made a mistake! It could be that we couldn't encode a response, or that our database flipped us off. Either way, take that precious request ID and ask us to look into it!
+
+## Ably
+### Publish
+
+#### AddSearchResult event
+These events are published when a search request is called in the trip-service and it has finish looking for matching trips. The trips are published as soon as they match the criterias estalished in the search filters. A search id is given in order to keep track of a specific search request.
+
+```
+[
+    {
+        "id": {{id}},
+        "name": "ADD_SEARCH_RESULT",
+        "connectionId": {{connectionId}},
+        "timestamp": {{timestamp}},
+        "data": "{
+            "id": {{id}},
+            "driverId": {{driverId}},
+            "vehicleId": {{vehicleId}},
+            "full": {{full}},
+            "leaveAt": {{leaveAt}},
+            "arriveBy": {{arriveBy}},
+            "seats": {{seats}},
+            "stops": [
+                {
+                    "id": {{id}},
+                    "point": {
+                        "longitude": {{longitude}},
+                        "latitude": {{latitude}},
+                        "name": {{name}}
+                    },
+                    "seats": {{seats}},
+                    "timestamp": {{timestamp}}
+                },
+                {
+                    "id": {{id}},
+                    "point": {
+                        "longitude": {{longitude}},
+                        "latitude": {{latitude}},
+                        "name": {{name}}
+                    },
+                    "seats": {{seats}},
+                    "timestamp": {{timestamp}}
+                },
+                {
+                    "id": {{id}},
+                    "point": {
+                        "longitude": {{longitude}},
+                        "latitude": {{latitude}},
+                        "name": {{name}}
+                    },
+                    "seats": {{seats}},
+                    "timestamp": {{timestamp}}
+                },
+                {
+                    "id": {{id}},
+                    "point": {
+                        "longitude": {{longitude}},
+                        "latitude": {{latitude}},
+                        "name": {{name}}
+                    },
+                    "seats": {{seats}},
+                    "timestamp": {{timestamp}}
+                },
+            ],
+            "details": {
+                "animals": {{animals}}, 
+                "luggages": {{luggages}}
+            },
+            "reservationsCount": {{reservationsCount}},
+            "pricePerSeat": {{pricePerSeat}},
+            "totalDistance": {{totalDistance}}
+        }
+    },
+]
+```
