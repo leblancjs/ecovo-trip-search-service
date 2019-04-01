@@ -9,7 +9,7 @@ import (
 type Trip struct {
 	ID                ID        `json:"id"`
 	DriverID          ID        `json:"driverId"`
-	VehicleID         ID        `json:"vehicleId"`
+	Vehicle           *Vehicle  `json:"vehicle"`
 	Full              bool      `json:"full"`
 	LeaveAt           time.Time `json:"leaveAt"`
 	ArriveBy          time.Time `json:"arriveBy"`
@@ -17,6 +17,7 @@ type Trip struct {
 	Stops             []*Stop   `json:"stops"`
 	Details           *Details  `json:"details"`
 	ReservationsCount int       `json:"reservationsCount"`
+	TotalTripPrice    float64   `json:"totalTripPrice"`
 	PricePerSeat      float64   `json:"pricePerSeat"`
 	TotalDistance     int       `json:"totalDistance"`
 }
@@ -27,6 +28,9 @@ const (
 
 	// MaximumSeats represents the maximum seats possible in a car.
 	MaximumSeats = 10
+
+	// MinimumTotalTripPrice represents the minimum price for a trip.
+	MinimumTotalTripPrice = 0.0
 
 	// MinimumPricePerSeat represents the minimum price per seat possible.
 	MinimumPricePerSeat = 0.0
@@ -53,12 +57,12 @@ func (t *Trip) Validate() error {
 		return ValidationError{"Driver's ID is missing"}
 	}
 
-	if t.VehicleID.IsZero() {
-		return ValidationError{"Vehicle's ID is missing"}
-	}
-
 	if t.Seats < MinimumSeats || t.Seats > MaximumSeats {
 		return ValidationError{fmt.Sprintf("number of seats must be between %d and %d", MinimumSeats, MaximumSeats)}
+	}
+
+	if t.TotalTripPrice < MinimumTotalTripPrice {
+		return ValidationError{fmt.Sprintf("totalTripPrice must be greater %f", MinimumTotalTripPrice)}
 	}
 
 	if t.PricePerSeat < MinimumPricePerSeat {
@@ -76,6 +80,11 @@ func (t *Trip) Validate() error {
 		}
 	} else {
 		return ValidationError{"missing details"}
+	}
+
+	err := t.Vehicle.Validate()
+	if err != nil {
+		return err
 	}
 
 	if t.Stops != nil {

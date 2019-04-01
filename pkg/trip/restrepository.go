@@ -19,7 +19,7 @@ type RestRepository struct {
 type document struct {
 	ID          primitive.ObjectID `bson:"_id,omitempty"`
 	DriverID    primitive.ObjectID `bson:"driverId"`
-	VehicleID   primitive.ObjectID `bson:"vehicleId"`
+	Vehicle     *entity.Vehicle    `bson:"vehicle"`
 	Source      *entity.Point      `bson:"source"`
 	Destination *entity.Point      `bson:"destination"`
 	LeaveAt     time.Time          `bson:"leaveAt"`
