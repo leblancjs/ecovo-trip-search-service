@@ -33,8 +33,8 @@ type Filters struct {
 	ArriveBy     time.Time `json:"arriveBy,ommitempty"`
 	Details      *Details  `json:"details,ommitempty"`
 	RadiusThresh *int      `json:"radiusThresh,ommitempty"`
-	Source       *Point    `json:"source,ommitempty"`
-	Destination  *Point    `json:"destination,ommitempty"`
+	Source       *Point    `json:"source"`
+	Destination  *Point    `json:"destination"`
 }
 
 const (
@@ -65,6 +65,14 @@ const (
 
 // Validate validates that the filters's required fields are filled out correctly.
 func (f *Filters) Validate() error {
+	if f.LeaveAt.IsZero() && f.ArriveBy.IsZero() {
+		return ValidationError{"arriveBy or leaveAt must be specified"}
+	}
+
+	if f.Source == nil || f.Destination == nil {
+		return ValidationError{"source and/or destination is missing"}
+	}
+
 	if f.Seats != nil && *f.Seats < 0 {
 		return ValidationError{"seats filter must be greater than 0"}
 	}
