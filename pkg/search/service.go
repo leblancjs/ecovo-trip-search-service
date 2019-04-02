@@ -1,10 +1,13 @@
 package search
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 
 	"azure.com/ecovo/trip-search-service/pkg/entity"
 	"azure.com/ecovo/trip-search-service/pkg/pubsub"
+	"azure.com/ecovo/trip-search-service/pkg/pubsub/subscription"
 	"azure.com/ecovo/trip-search-service/pkg/route"
 	"azure.com/ecovo/trip-search-service/pkg/trip"
 )
@@ -25,12 +28,27 @@ type Service struct {
 	orchestrator *Orchestrator
 }
 
-const channelPrefix = "search:"
+const searchChannelPrefix = "search:"
+const tripsChannel = "trips"
 
 // NewService creates a search service to handle business logic and manipulate
 // searches through a repository.
-func NewService(repo Repository, pubSub pubsub.UseCase, trip trip.UseCase, routeService route.UseCase) UseCase {
-	return &Service{repo, pubSub, trip, NewOrchestrator(routeService)}
+func NewService(repo Repository, pubSub pubsub.UseCase, trip trip.UseCase, routeService route.UseCase) (UseCase, error) {
+	orchestrator := NewOrchestrator(routeService)
+	tripsSub, err := pubSub.Subscribe(tripsChannel)
+
+	if err != nil {
+		return nil, fmt.Errorf("trip.Service: error subscribing to channel (%s) ", err)
+	}
+
+	s := &Service{repo, pubSub, trip, orchestrator}
+
+	err = tripsSub.Subscribe(s.listenTripsChange)
+	if err != nil {
+		return nil, fmt.Errorf("trip.Service: error subscribing to channel (%s) ", err)
+	}
+
+	return s, nil
 }
 
 // Create validates the search's information, creates it, creates a
@@ -51,8 +69,15 @@ func (s *Service) Create(search *entity.Search) (*entity.Search, error) {
 		return nil, err
 	}
 
-	sub, err := s.pubSub.Subscribe(channelPrefix + string(search.ID))
+	sub, err := s.pubSub.Subscribe(searchChannelPrefix + string(search.ID))
 	if err != nil {
+		return nil, err
+	}
+
+	err = s.orchestrator.StartSearch(search, sub)
+	if err != nil {
+		s.pubSub.Unsubscribe(searchChannelPrefix + search.ID.Hex())
+		_ = s.repo.Delete(search.ID)
 		return nil, err
 	}
 
@@ -61,11 +86,8 @@ func (s *Service) Create(search *entity.Search) (*entity.Search, error) {
 		return nil, err
 	}
 
-	err = s.orchestrator.StartSearch(search, sub, trips)
-	if err != nil {
-		s.pubSub.Unsubscribe(channelPrefix + search.ID.Hex())
-		_ = s.repo.Delete(search.ID)
-		return nil, err
+	for _, t := range trips {
+		s.orchestrator.PublishTrip(t)
 	}
 
 	return search, nil
@@ -87,7 +109,7 @@ func (s *Service) FindByID(ID entity.ID) (*entity.Search, error) {
 func (s *Service) Delete(ID entity.ID) error {
 	s.orchestrator.StopSearch(ID.Hex())
 
-	s.pubSub.Unsubscribe(channelPrefix + string(ID))
+	s.pubSub.Unsubscribe(searchChannelPrefix + string(ID))
 
 	err := s.repo.Delete(ID)
 	if err != nil {
@@ -95,4 +117,16 @@ func (s *Service) Delete(ID entity.ID) error {
 	}
 
 	return nil
+}
+
+// listenTripsChange is a routine that listens to any update or add of a trip from Ably
+func (s *Service) listenTripsChange(msg *subscription.Message) {
+	trip := &entity.Trip{}
+	err := json.Unmarshal([]byte(msg.Data.(string)), trip)
+	if err != nil {
+		log.Println("search.Service: unable to unmarshal msg from subscription")
+		return
+	}
+	s.orchestrator.PublishTrip(trip)
+
 }

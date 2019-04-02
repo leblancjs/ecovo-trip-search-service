@@ -18,14 +18,14 @@ type Worker struct {
 	filters      *entity.Filters
 	sub          subscription.Subscription
 	started      bool
-	trips        []*entity.Trip
+	trips        chan *entity.Trip
 	routeService route.UseCase
 	quit         chan bool
 }
 
 // NewWorker creates a new search worker that uses the subscription to publish
 // results.
-func NewWorker(filters *entity.Filters, sub subscription.Subscription, trips []*entity.Trip, routeService route.UseCase) (*Worker, error) {
+func NewWorker(filters *entity.Filters, sub subscription.Subscription, routeService route.UseCase) (*Worker, error) {
 	if filters == nil {
 		return nil, fmt.Errorf("search.Worker: cannot work with nil filters")
 	}
@@ -37,7 +37,7 @@ func NewWorker(filters *entity.Filters, sub subscription.Subscription, trips []*
 	return &Worker{
 		filters:      filters,
 		sub:          sub,
-		trips:        trips,
+		trips:        make(chan *entity.Trip),
 		routeService: routeService,
 		quit:         make(chan bool),
 	}, nil
@@ -66,45 +66,37 @@ func (w *Worker) Stop() {
 }
 
 func (w *Worker) run() {
-	tripIndex := 0
-
 	for {
 		select {
 		case <-w.quit:
 			return
-		default:
-			if tripIndex < len(w.trips) {
-				r, err := w.routeService.GetRoute(w.trips[tripIndex])
-				if err != nil {
-					log.Println("searchWorker: failed to get route from google maps")
-					break
-				}
-
-				isValid := false
-				if w.filters != nil && w.trips[tripIndex] != nil {
-					isValid, err = validateTrip(w.trips[tripIndex], w.filters, r)
-					if err != nil {
-						log.Println(err)
-						break
-					}
-				}
-
-				if isValid {
-					err := w.sub.Publish(&subscription.Message{
-						Type: EventAddResult,
-						Data: w.trips[tripIndex],
-					})
-					if err != nil {
-						log.Println(err)
-						break
-					}
-				}
-				tripIndex++
-			} else {
-				w.started = false
-				return
+		case trip := <-w.trips:
+			r, err := w.routeService.GetRoute(trip)
+			if err != nil {
+				log.Println("searchWorker: failed to get route from google maps")
+				break
 			}
 
+			isValid := false
+			if w.filters != nil && trip != nil {
+				isValid, err = validateTrip(trip, w.filters, r)
+				if err != nil {
+					log.Println(err)
+					break
+				}
+			}
+
+			if isValid {
+				err := w.sub.Publish(&subscription.Message{
+					Type: EventAddResult,
+					Data: trip,
+				})
+				if err != nil {
+					log.Println(err)
+					break
+				}
+			}
+		default:
 			break
 		}
 	}
