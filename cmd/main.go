@@ -99,7 +99,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	searchUseCase := search.NewService(searchRepository, pubSubService, tripUseCase, routeUseCase)
+	searchUseCase, err := search.NewService(searchRepository, pubSubService, tripUseCase, routeUseCase)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	r := mux.NewRouter()
 

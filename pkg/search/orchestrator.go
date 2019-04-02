@@ -25,7 +25,7 @@ func NewOrchestrator(routeService route.UseCase) *Orchestrator {
 // StartSearch creates and starts a worker to search for results and publish
 // them to the given subscription. Only one worker can exist for a given search
 // ID.
-func (o *Orchestrator) StartSearch(search *entity.Search, sub subscription.Subscription, trips []*entity.Trip) error {
+func (o *Orchestrator) StartSearch(search *entity.Search, sub subscription.Subscription) error {
 	if search == nil {
 		return fmt.Errorf("search.Orchestrator: cannot start worker for nil search")
 	}
@@ -37,7 +37,7 @@ func (o *Orchestrator) StartSearch(search *entity.Search, sub subscription.Subsc
 		return fmt.Errorf("search.Orchestrator: cannot start another worker for same search ID \"%s\"", searchID)
 	}
 
-	worker, err := NewWorker(search.Filters, sub, trips, o.routeService)
+	worker, err := NewWorker(search.Filters, sub, o.routeService)
 	if err != nil {
 		return err
 	}
@@ -60,4 +60,11 @@ func (o *Orchestrator) StopSearch(id string) {
 	}
 
 	delete(o.workers, id)
+}
+
+// PublishTrip will send trips to the work so it can be published on Ably
+func (o *Orchestrator) PublishTrip(trip *entity.Trip) {
+	for _, w := range o.workers {
+		w.trips <- trip
+	}
 }

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"azure.com/ecovo/trip-search-service/pkg/trip"
+
 	"github.com/ably/ably-go/ably"
 )
 
@@ -43,6 +45,22 @@ func (s *AblySubscription) Publish(msg *Message) error {
 	if err != nil {
 		return fmt.Errorf("subscription.AblySubscription [topic=%s]: failed to marshal message (%s)", s.Topic(), err)
 	}
+
+	return nil
+}
+
+// Subscribe listens to messages sent on the subscription's topic.
+func (s *AblySubscription) Subscribe(callback Callback) error {
+	sub, err := s.channel.Subscribe(trip.EventTripAdded, trip.EventTripChanged)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		for msg := range sub.MessageChannel() {
+			callback(&Message{Type: msg.Name, Data: msg.Data})
+		}
+	}()
 
 	return nil
 }
