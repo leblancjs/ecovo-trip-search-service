@@ -2,10 +2,15 @@ package entity
 
 import (
 	"testing"
+	"time"
 )
 
 func TestSearchValidation(t *testing.T) {
-	var filters = Filters{}
+	var filters = Filters{
+		Source:      &Point{Latitude: MinimumLatitude, Longitude: MinimumLongitude},
+		Destination: &Point{Latitude: MinimumLatitude, Longitude: MinimumLongitude},
+		LeaveAt:     time.Now(),
+	}
 	var search = Search{Filters: &filters}
 
 	t.Run("Should fail when filters are missing", func(t *testing.T) {
@@ -28,7 +33,11 @@ func TestSearchValidation(t *testing.T) {
 }
 
 func TestFiltersValidation(t *testing.T) {
-	var filters = Filters{}
+	var filters = Filters{
+		Source:      &Point{Latitude: MinimumLatitude, Longitude: MinimumLongitude},
+		Destination: &Point{Latitude: MinimumLatitude, Longitude: MinimumLongitude},
+		LeaveAt:     time.Now(),
+	}
 
 	t.Run("Should succeed when filters are valid", func(t *testing.T) {
 		f := filters
