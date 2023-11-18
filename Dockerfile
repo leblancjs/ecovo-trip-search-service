@@ -1,5 +1,7 @@
 FROM golang:alpine AS build
 
+ARG TARGETARCH
+
 ENV PROJECT_NAME=azure.com/ecovo/trip-search-service
 ENV BINARY_NAME=trip-search-service
 
@@ -18,7 +20,7 @@ WORKDIR $GOPATH/src/${PROJECT_NAME}/cmd
 RUN go mod download
 
 # Build the project
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags '-w -s' -o /bin/${BINARY_NAME}
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build -ldflags '-w -s' -o /bin/${BINARY_NAME}
 
 # Test the project
 RUN CGO_ENABLED=0 go test ../...
